@@ -1,8 +1,11 @@
 #include <iostream>
 
 #include "transport_catalogue.h"
-#include "input_reader.h"
-#include "stat_reader.h"
+#include "json_reader.h"
+#include "map_renderer.h"
+
+#include "domain.h"
+#include "svg.h"
 
 #include <iostream>
 
@@ -10,12 +13,21 @@ using namespace std;
 
 int main()
 {
-    TransportCatalogue transport_catalogue;
+    TransportCatalogue db;
+    JsonReader proccessing_json(db);
 
-    InputReader reader(transport_catalogue);
-    reader.ProcessingRequest(std::cin);
+    //Чтение Json
+    proccessing_json.ReadJson(std::cin);
 
-    StatReader stat_reader(transport_catalogue, std::cin, std::cout);
-    stat_reader.ProcessingStat();
+    //Загрузка данных в транспортный каталог
+    proccessing_json.LoadData();
 
+    //Отрисовка карты
+    //proccessing_json.RenderMap(std::cout);
+
+    //Обработка запросов
+    proccessing_json.ProcessingRequest();
+
+    //Вывод JSON-массива ответов
+    proccessing_json.PrintResponseArray(std::cout);
 }

@@ -31,10 +31,11 @@ const Stop* TransportCatalogue::FindStop(std::string_view stopname) const {
 }
 
 
-void TransportCatalogue::AddBus(std::string busname, std::vector<std::string> stopnames) {
+void TransportCatalogue::AddBus(std::string busname, std::vector<std::string> stopnames, bool is_roundtrip) {
     buses_.push_back(Bus{});
     auto bus = &buses_.back();
     bus->busname = busname;
+    bus->is_roundtrip = is_roundtrip;
 
     for(const auto& stopname : stopnames) {
         const Stop* found_stop = FindStop(stopname);
@@ -56,7 +57,7 @@ const Bus* TransportCatalogue::FindBus(std::string_view busname) const {
     return finded_bus->second;
 }
 
-BusInfo TransportCatalogue::GetBusInfo(std::string_view busname) const {
+const BusInfo TransportCatalogue::GetBusInfo(std::string_view busname) const {
     const Bus* bus = FindBus(busname);
     if (*bus == Bus{}) {
         BusInfo bus_info;
@@ -70,8 +71,8 @@ BusInfo TransportCatalogue::GetBusInfo(std::string_view busname) const {
     size_t route_len = 0;
     double straight_way = 0.0;
 
-    Coordinates coordinate_from = (*bus->stops.begin())->coordinates;
-    Coordinates coordinate_to;
+    geo::Coordinates coordinate_from = (*bus->stops.begin())->coordinates;
+    geo::Coordinates coordinate_to;
     const Stop* stop_from = *bus->stops.begin();
     const Stop* stop_to;
 
@@ -79,7 +80,7 @@ BusInfo TransportCatalogue::GetBusInfo(std::string_view busname) const {
     //добавление в уникальные остановки
     for (auto iter = std::next(bus->stops.begin()); iter != bus->stops.end(); ++iter) {
         coordinate_to = (*iter)->coordinates;
-        straight_way += ComputeDistance(coordinate_from, coordinate_to);
+        straight_way += geo::ComputeDistance(coordinate_from, coordinate_to);
         coordinate_from = coordinate_to;
 
         stop_to = *iter;
@@ -100,7 +101,7 @@ BusInfo TransportCatalogue::GetBusInfo(std::string_view busname) const {
     return bus_info;
 }
 
-StopInfo TransportCatalogue::GetStopInfo(std::string_view stopname) const {
+const StopInfo TransportCatalogue::GetStopInfo(std::string_view stopname) const {
     auto found_stop = stopname_to_buses_.find(stopname);
     StopInfo stop_info;
     stop_info.stopname = stopname;
@@ -121,5 +122,9 @@ void TransportCatalogue::SetDistancesToStops(PairStops pair_stops, size_t distan
     if (distances_to_stops_.find(reverse_pair) == distances_to_stops_.end()) {
         distances_to_stops_[std::move(reverse_pair)] = distance;
     }
+}
+
+const std::unordered_map<std::string_view, const Bus*>* TransportCatalogue::GetBusnameToBus() const {
+    return &busname_to_bus_;
 }
 
