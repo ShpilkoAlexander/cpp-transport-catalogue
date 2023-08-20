@@ -10,38 +10,46 @@ JsonReader::JsonReader(TransportCatalogue db)
 void JsonReader::LoadData() {
     for (const auto& request : base_requests_) {
         if (request.AsMap().at("type").AsString() == "Stop") {
-            StopAdding(request.AsMap());
+            ParsingStop(request.AsMap());
         }
     }
     for (const auto& request : base_requests_) {
         if (request.AsMap().at("type").AsString() == "Bus") {
-                    BusAdding(request.AsMap());
+                    ParsingBus(request.AsMap());
         }
     }
 
-    DistanceAdding();
+    db_.DistanceAdd();
 }
 
 //Чтение цвета из Node
 svg::Color JsonReader::GetColorFromNode(json::Node& color) {
-    if (color.IsString()) {
+    bool color_is_string = color.IsString();
+    if (color_is_string) {
         return color.AsString();
-    } else if (color.IsArray() && color.AsArray().size() == 3) {
-        svg::Rgb rgb;
-        rgb.red = color.AsArray().at(0).AsInt();
-        rgb.green = color.AsArray().at(1).AsInt();
-        rgb.blue = color.AsArray().at(2).AsInt();
-        return rgb;
-    } else if (color.IsArray() && color.AsArray().size() == 4) {
-        svg::Rgba rgba;
-        rgba.red = color.AsArray().at(0).AsInt();
-        rgba.green = color.AsArray().at(1).AsInt();
-        rgba.blue = color.AsArray().at(2).AsInt();
-        rgba.opacity = color.AsArray().at(3).AsDouble();
-        return rgba;
-    }  else {
+    }
+    if (!color.IsArray()) {
         throw json::ParsingError("Failed to read color");
     }
+    const json::Array& color_array = color.AsArray();
+
+    if (color_array.size() == 3) {
+        svg::Rgb rgb;
+        rgb.red = color_array.at(0).AsInt();
+        rgb.green = color_array.at(1).AsInt();
+        rgb.blue = color_array.at(2).AsInt();
+        return rgb;
+    }
+
+    if (color_array.size() == 4) {
+        svg::Rgba rgba;
+        rgba.red = color_array.at(0).AsInt();
+        rgba.green = color_array.at(1).AsInt();
+        rgba.blue = color_array.at(2).AsInt();
+        rgba.opacity = color_array.at(3).AsDouble();
+        return rgba;
+    }
+    throw json::ParsingError("Failed to read color");
 }
 
 //Получение данных для вывод карты
@@ -80,8 +88,10 @@ void JsonReader::ReadJson(std::istream& input) {
     render_settings_ = read_data.GetRoot().AsMap().at("render_settings").AsMap();
 }
 
+
+
 //Обработка запроса на добавления остановки
-void JsonReader::StopAdding(const json::Dict& stop_info) {
+void JsonReader::ParsingStop(const json::Dict& stop_info) {
     Stop stop;
 
     stop.stopname = stop_info.at("name").AsString();
@@ -90,14 +100,12 @@ void JsonReader::StopAdding(const json::Dict& stop_info) {
     stop.coordinates.lng = stop_info.at("longitude").AsDouble();
 
     StopsWithDistances stops_with_distance;
-    stops_with_distance.stop = db_.AddStop(std::move(stop));
-    stops_with_distance.distances = stop_info.at("road_distances").AsMap();
-
-    stops_with_distance_.push_back(std::move(stops_with_distance));
+    DistancesToStops distances_to_stops = DictStrNodeToStrInt(stop_info.at("road_distances").AsMap());
+    db_.AddStop(std::move(stop), distances_to_stops);
 }
 
 //Обработка запроса на добавления остановки
-void JsonReader::BusAdding(const json::Dict& bus_info) {
+void JsonReader::ParsingBus(const json::Dict& bus_info) {
     std::vector<std::string> stopnames;
 
     for (auto stopname : bus_info.at("stops").AsArray()) {
@@ -115,24 +123,16 @@ void JsonReader::BusAdding(const json::Dict& bus_info) {
     db_.AddBus(bus_info.at("name").AsString(), stopnames, bus_info.at("is_roundtrip").AsBool());
 }
 
-void JsonReader::DistanceAdding() {
-   for (const auto& stop_distances : stops_with_distance_) {
-       if (stop_distances.distances.empty()) {
-           continue;
-       }
-       StopsDistancesAdding(stop_distances.stop, stop_distances.distances);
-   }
-}
-
-void JsonReader::StopsDistancesAdding(const Stop* stop, const json::Dict& distances) {
-
-    for (const auto& [stopname, distance] : distances) {
-        db_.SetDistancesToStops(PairStops{stop, db_.FindStop(stopname)}, distance.AsInt());
+const DistancesToStops JsonReader::DictStrNodeToStrInt(const json::Dict& distances_node) {
+    DistancesToStops distances_to_stops;
+    for (const auto& [stop, distances] : distances_node) {
+        distances_to_stops[stop] = distances.AsInt();
     }
+    return distances_to_stops;
 }
 
 //Обработка запроса об остановке
-void JsonReader::ProccessingStopRequest(const json::Dict& stop_request) {
+void JsonReader::ProccessStopRequest(const json::Dict& stop_request) {
     StopInfo stop_info = db_.GetStopInfo(stop_request.at("name").AsString());
     json::Dict response;
     if (stop_info.is_found) {
@@ -151,7 +151,7 @@ void JsonReader::ProccessingStopRequest(const json::Dict& stop_request) {
 }
 
 //Обработка запроса о маршруте
-void JsonReader::ProccessingBusRequest(const json::Dict& bus_request) {
+void JsonReader::ProccessBusRequest(const json::Dict& bus_request) {
     BusInfo bus_info = db_.GetBusInfo(bus_request.at("name").AsString());
     json::Dict response;
 
@@ -169,7 +169,7 @@ void JsonReader::ProccessingBusRequest(const json::Dict& bus_request) {
 }
 
 //Обработка запроса о отрисовки карты
-void JsonReader::ProccessingRenderMap(int req_id) {
+void JsonReader::ProccessRenderMap(int req_id) {
     json::Dict response;
     std::ostringstream output;
     RenderMap(output);
@@ -184,13 +184,13 @@ void JsonReader::ProccessingRenderMap(int req_id) {
 void JsonReader::ProcessingRequest() {
     for (const auto& request : stat_requests_) {
         if (request.AsMap().at("type").AsString() == "Stop") {
-            ProccessingStopRequest(request.AsMap());
+            ProccessStopRequest(request.AsMap());
         }
         else if (request.AsMap().at("type").AsString() == "Bus") {
-            ProccessingBusRequest(request.AsMap());
+            ProccessBusRequest(request.AsMap());
         }
         else if (request.AsMap().at("type").AsString() == "Map") {
-            ProccessingRenderMap(request.AsMap().at("id").AsInt());
+            ProccessRenderMap(request.AsMap().at("id").AsInt());
         }
         else {
             throw std::runtime_error("Proccessing requests error");

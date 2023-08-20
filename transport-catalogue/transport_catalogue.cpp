@@ -12,12 +12,18 @@
 
 
 
-Stop* TransportCatalogue::AddStop(Stop stop) {
+void TransportCatalogue::AddStop(const Stop& stop, DistancesToStops& distance_to_stops) {
     stops_.push_back(stop);
 
     stopname_to_stop_[stops_.back().stopname] = &stops_.back();
     stopname_to_buses_[stops_.back().stopname];
-    return &stops_.back();
+
+    StopsWithDistances stops_with_distance;
+
+    stops_with_distance.stop = &stops_.back();
+    stops_with_distance.distances = distance_to_stops;
+
+    stops_with_distance_.push_back(std::move(stops_with_distance));
 }
 
 const Stop* TransportCatalogue::FindStop(std::string_view stopname) const {
@@ -31,7 +37,7 @@ const Stop* TransportCatalogue::FindStop(std::string_view stopname) const {
 }
 
 
-void TransportCatalogue::AddBus(std::string busname, std::vector<std::string> stopnames, bool is_roundtrip) {
+void TransportCatalogue::AddBus(std::string_view busname, std::vector<std::string>& stopnames, bool is_roundtrip) {
     buses_.push_back(Bus{});
     auto bus = &buses_.back();
     bus->busname = busname;
@@ -45,6 +51,22 @@ void TransportCatalogue::AddBus(std::string busname, std::vector<std::string> st
     }
 
     busname_to_bus_[buses_.back().busname] = bus;
+}
+
+void TransportCatalogue::DistanceAdd() {
+   for (const auto& stop_distances : stops_with_distance_) {
+       if (stop_distances.distances.empty()) {
+           continue;
+       }
+       StopsDistancesAdd(stop_distances.stop, stop_distances.distances);
+   }
+}
+
+void TransportCatalogue::StopsDistancesAdd(const Stop* stop, const DistancesToStops&  distances) {
+
+    for (const auto& [stopname, distance] : distances) {
+        SetDistancesToStops(stop, FindStop(stopname), distance);
+    }
 }
 
 const Bus* TransportCatalogue::FindBus(std::string_view busname) const {
@@ -115,10 +137,10 @@ const StopInfo TransportCatalogue::GetStopInfo(std::string_view stopname) const 
     return stop_info;
 }
 
-void TransportCatalogue::SetDistancesToStops(PairStops pair_stops, size_t distance) {
-    distances_to_stops_[pair_stops] = distance;
+void TransportCatalogue::SetDistancesToStops(const Stop* stop_from, const Stop* stop_to, size_t distance) {
+    distances_to_stops_[{stop_from, stop_to}] = distance;
 
-    PairStops reverse_pair(pair_stops.second, pair_stops.first);
+    PairStops reverse_pair(stop_to, stop_from);
     if (distances_to_stops_.find(reverse_pair) == distances_to_stops_.end()) {
         distances_to_stops_[std::move(reverse_pair)] = distance;
     }

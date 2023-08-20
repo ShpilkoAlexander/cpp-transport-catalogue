@@ -9,6 +9,8 @@
 #include <string>
 #include <vector>
 #include <set>
+#include <map>
+
 
 struct Stop {
     std::string stopname;
@@ -57,6 +59,12 @@ struct Request {
         type_(type), text_(text){
 
     }
+};
+
+using DistancesToStops = std::map<std::string, int>;
+struct StopsWithDistances {
+    const Stop* stop;
+    DistancesToStops distances;
 };
 
 
