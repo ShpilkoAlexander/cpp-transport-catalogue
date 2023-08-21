@@ -22,12 +22,10 @@ int main()
     //Загрузка данных в транспортный каталог
     proccessing_json.LoadData();
 
-    //Отрисовка карты
-    //proccessing_json.RenderMap(std::cout);
-
     //Обработка запросов
     proccessing_json.ProcessingRequest();
 
     //Вывод JSON-массива ответов
     proccessing_json.PrintResponseArray(std::cout);
+
 }

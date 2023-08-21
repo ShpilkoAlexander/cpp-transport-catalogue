@@ -1,6 +1,7 @@
 #include "json_reader.h"
-
 #include "transport_catalogue.h"
+
+#include <sstream>
 
 JsonReader::JsonReader(TransportCatalogue db)
     : db_(db) {
@@ -134,54 +135,64 @@ const DistancesToStops JsonReader::DictStrNodeToStrInt(const json::Dict& distanc
 //Обработка запроса об остановке
 void JsonReader::ProccessStopRequest(const json::Dict& stop_request) {
     StopInfo stop_info = db_.GetStopInfo(stop_request.at("name").AsString());
-    json::Dict response;
-    if (stop_info.is_found) {
-        json::Array node_buses;
+    json::Builder response;
+    response.StartDict();
 
+    response.Key("request_id").Value(stop_request.at("id").AsInt());
+
+    if (stop_info.is_found) {
+        response.Key("buses").StartArray();
         for (auto bus : stop_info.buses) {
-            node_buses.push_back(json::Node(std::string(bus)));
+            response.Value(json::Node{static_cast<std::string>(bus)});
         }
-        response["buses"] = node_buses;
+        response.EndArray();
     }
     else {
-        response["error_message"] = "not found";
+        response.Key("error_message").Value("not found");
     }
-    response["request_id"] = stop_request.at("id").AsInt();
-    response_array_.push_back(json::Node{response});
+    response.EndDict();
+    response_array_.Value(response.Build());
 }
 
 //Обработка запроса о маршруте
 void JsonReader::ProccessBusRequest(const json::Dict& bus_request) {
     BusInfo bus_info = db_.GetBusInfo(bus_request.at("name").AsString());
-    json::Dict response;
+    json::Builder response;
+    response.StartDict();
+    response.Key("request_id").Value(bus_request.at("id").AsInt());
 
     if (bus_info.is_found) {
-        response["curvature"] = json::Node{bus_info.curvature};
-        response["route_length"] = json::Node{bus_info.route_len};
-        response["stop_count"] = json::Node{int(bus_info.stops_count)};
-        response["unique_stop_count"] = json::Node{int(bus_info.uniq_stops_count)};
+        response.Key("curvature").Value(json::Node{bus_info.curvature});
+        response.Key("route_length").Value(json::Node{bus_info.route_len});
+        response.Key("stop_count").Value(json::Node{int(bus_info.stops_count)});
+        response.Key("unique_stop_count").Value(json::Node{int(bus_info.uniq_stops_count)});
     }
     else {
-        response["error_message"] = "not found";
+        response.Key("error_message").Value("not found");
     }
-    response["request_id"] = bus_request.at("id").AsInt();
-    response_array_.push_back(json::Node{response});
+
+    response.EndDict();
+    response_array_.Value(response.Build());
 }
 
 //Обработка запроса о отрисовки карты
 void JsonReader::ProccessRenderMap(int req_id) {
-    json::Dict response;
+    json::Builder response;
+    response.StartDict();
+
     std::ostringstream output;
     RenderMap(output);
 
-    response["map"] = json::Node{output.str()};
-    response["request_id"] = json::Node{req_id};
+    response.Key("request_id").Value(json::Node{req_id});;
+    response.Key("map").Value(output.str());
 
-    response_array_.push_back(json::Node{response});
+    response.EndDict();
+    response_array_.Value(response.Build());
 }
 
 //Обработка запросов
 void JsonReader::ProcessingRequest() {
+    response_array_.StartArray();
     for (const auto& request : stat_requests_) {
         if (request.AsMap().at("type").AsString() == "Stop") {
             ProccessStopRequest(request.AsMap());
@@ -196,6 +207,7 @@ void JsonReader::ProcessingRequest() {
             throw std::runtime_error("Proccessing requests error");
         }
     }
+    response_array_.EndArray();
 }
 
 //Отрисовка карты
@@ -207,6 +219,6 @@ void JsonReader::RenderMap(std::ostream& output) {
 
 //Вывод JSON-массива ответов
 void JsonReader::PrintResponseArray(std::ostream& output) {
-    json::PrintNode(response_array_, output);
+    json::Print(response_array_.Build(), output);
 
 }

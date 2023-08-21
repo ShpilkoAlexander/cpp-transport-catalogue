@@ -6,6 +6,7 @@
 #include "map_renderer.h"
 #include "svg.h"
 #include "request_handler.h"
+#include "json_builder.h"
 
 #include <iostream>
 
@@ -31,7 +32,7 @@ private:
     json::Array base_requests_;
     json::Array stat_requests_;
     json::Dict render_settings_;
-    json::Array response_array_;
+    json::Builder response_array_;
 
     //Обработка запроса на добавления остановки
     void ParsingStop(const json::Dict& stop_info);

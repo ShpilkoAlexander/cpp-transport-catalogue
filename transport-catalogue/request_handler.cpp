@@ -18,7 +18,6 @@ void RequestHandler::LoadBusesAndCoordinates() const {
     for (const auto& [key, value] : *db_.GetBusnameToBus()) {
         buses.emplace_back(value);
         for (auto const stop : value->stops) {
-            //stops.emplace_back(stop);
             stops_set.insert(stop);
             coordinates.emplace_back(stop->coordinates);   
         }
