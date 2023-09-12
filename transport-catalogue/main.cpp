@@ -14,18 +14,18 @@ using namespace std;
 int main()
 {
     TransportCatalogue db;
-    JsonReader proccessing_json(db);
+    JsonReader process_json(db);
 
     //Чтение Json
-    proccessing_json.ReadJson(std::cin);
+    process_json.ReadJson(std::cin);
 
     //Загрузка данных в транспортный каталог
-    proccessing_json.LoadData();
+    process_json.LoadData();
 
     //Обработка запросов
-    proccessing_json.ProcessingRequest();
+    process_json.ProcessRequest();
 
     //Вывод JSON-массива ответов
-    proccessing_json.PrintResponseArray(std::cout);
+    process_json.PrintResponseArray(std::cout);
 
 }

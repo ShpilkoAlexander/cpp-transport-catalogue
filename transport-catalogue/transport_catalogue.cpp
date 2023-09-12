@@ -62,6 +62,18 @@ void TransportCatalogue::DistanceAdd() {
    }
 }
 
+const std::deque<Stop>& TransportCatalogue::GetStops() const {
+    return stops_;
+}
+
+size_t TransportCatalogue::CountStops() const {
+    return stops_.size();
+}
+
+const std::deque<Bus>& TransportCatalogue::GetBuses() const {
+    return buses_;
+}
+
 void TransportCatalogue::StopsDistancesAdd(const Stop* stop, const DistancesToStops&  distances) {
 
     for (const auto& [stopname, distance] : distances) {
@@ -145,6 +157,11 @@ void TransportCatalogue::SetDistancesToStops(const Stop* stop_from, const Stop* 
         distances_to_stops_[std::move(reverse_pair)] = distance;
     }
 }
+
+const std::unordered_map<PairStops, size_t, PairStopsHasher>& TransportCatalogue::GetDistancesToStops() const{
+    return distances_to_stops_;
+}
+
 
 const std::unordered_map<std::string_view, const Bus*>* TransportCatalogue::GetBusnameToBus() const {
     return &busname_to_bus_;

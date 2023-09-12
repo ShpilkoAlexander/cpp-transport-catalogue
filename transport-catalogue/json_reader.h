@@ -7,8 +7,14 @@
 #include "svg.h"
 #include "request_handler.h"
 #include "json_builder.h"
+#include "transport_router.h"
 
 #include <iostream>
+#include <memory>
+
+//struct RouteInfo {
+//    std::vector<
+//};
 
 
 class JsonReader {
@@ -22,16 +28,18 @@ public:
     void LoadData();
 
     //Обработка запросов
-    void ProcessingRequest();
+    void ProcessRequest();
 
     //Вывод JSON-массива ответов
     void PrintResponseArray(std::ostream& output);
 
 private:
     TransportCatalogue db_;
+    std::unique_ptr<TransportRouter> trans_router_;
     json::Array base_requests_;
     json::Array stat_requests_;
     json::Dict render_settings_;
+    json::Dict routing_settings_;
     json::Builder response_array_;
 
     //Обработка запроса на добавления остановки
@@ -43,19 +51,27 @@ private:
     const DistancesToStops DictStrNodeToStrInt(const json::Dict& distances_node);
 
     //Обработка запроса об остановке
-    void ProccessStopRequest(const json::Dict& stop_request);
+    void ProcessStopRequest(const json::Dict& stop_request);
 
     //Обработка запроса о маршруте
-    void ProccessBusRequest(const json::Dict& bus_request);
+    void ProcessBusRequest(const json::Dict& bus_request);
+
+    //Обработка запроса о построении маршрута
+    void ProcessRoute(const json::Dict& route_request);
+
+    json::Node RouteInfoToJson(const std::vector<EdgeInfo>& edge_info) const;
 
     //Обработка запроса о отрисовки карты
-    void ProccessRenderMap(int req_id);
+    void ProcessRenderMap(int req_id);
 
     //Отрисовка карты
     void RenderMap(std::ostream& output);
 
     //Получение данных для вывод карты
     renderer::RenderSettings GetRenderSettings();
+
+    //Отрисовка карты
+    void BuildRoute(std::ostream& output);
 
     //Чтение цвета из Node
     svg::Color GetColorFromNode(json::Node& color);

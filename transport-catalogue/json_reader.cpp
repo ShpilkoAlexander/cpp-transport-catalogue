@@ -3,6 +3,8 @@
 
 #include <sstream>
 
+using namespace std::literals;
+
 JsonReader::JsonReader(TransportCatalogue db)
     : db_(db) {
 }
@@ -19,8 +21,10 @@ void JsonReader::LoadData() {
                     ParsingBus(request.AsMap());
         }
     }
-
     db_.DistanceAdd();
+    trans_router_ = std::make_unique<TransportRouter>(routing_settings_.at("bus_wait_time").AsInt(), routing_settings_.at("bus_velocity").AsInt(), db_);
+
+
 }
 
 //Чтение цвета из Node
@@ -87,6 +91,7 @@ void JsonReader::ReadJson(std::istream& input) {
     base_requests_ = read_data.GetRoot().AsMap().at("base_requests").AsArray();
     stat_requests_ = read_data.GetRoot().AsMap().at("stat_requests").AsArray();
     render_settings_ = read_data.GetRoot().AsMap().at("render_settings").AsMap();
+    routing_settings_ = read_data.GetRoot().AsMap().at("routing_settings").AsMap();
 }
 
 
@@ -133,7 +138,7 @@ const DistancesToStops JsonReader::DictStrNodeToStrInt(const json::Dict& distanc
 }
 
 //Обработка запроса об остановке
-void JsonReader::ProccessStopRequest(const json::Dict& stop_request) {
+void JsonReader::ProcessStopRequest(const json::Dict& stop_request) {
     StopInfo stop_info = db_.GetStopInfo(stop_request.at("name").AsString());
     json::Builder response;
     response.StartDict();
@@ -155,7 +160,7 @@ void JsonReader::ProccessStopRequest(const json::Dict& stop_request) {
 }
 
 //Обработка запроса о маршруте
-void JsonReader::ProccessBusRequest(const json::Dict& bus_request) {
+void JsonReader::ProcessBusRequest(const json::Dict& bus_request) {
     BusInfo bus_info = db_.GetBusInfo(bus_request.at("name").AsString());
     json::Builder response;
     response.StartDict();
@@ -175,8 +180,60 @@ void JsonReader::ProccessBusRequest(const json::Dict& bus_request) {
     response_array_.Value(response.Build());
 }
 
+json::Node JsonReader::RouteInfoToJson(const std::vector<EdgeInfo>& edge_info) const {
+    json::Builder json_info;
+    json_info.StartArray();
+
+    for(const auto& info : edge_info) {
+        switch (info.type) {
+        case EdgeType::WAIT:
+            json_info.StartDict();
+            json_info.Key("type").Value("Wait"s);
+            json_info.Key("stop_name").Value(std::string(info.name));
+            json_info.Key("time").Value(info.time);
+            json_info.EndDict();
+            break;
+        case EdgeType::BUS_T:
+            json_info.StartDict();
+            json_info.Key("type").Value("Bus"s);
+            json_info.Key("bus").Value(std::string(info.name));
+            json_info.Key("span_count").Value(info.span_count);
+            json_info.Key("time").Value(info.time);
+            json_info.EndDict();
+            break;
+        default:
+            throw std::runtime_error("Error edge type");
+            break;
+        }
+    }
+
+    json_info.EndArray();
+    return json_info.Build();
+}
+
+//Обработка запроса о построении маршрута
+void JsonReader::ProcessRoute(const json::Dict& route_request) {
+
+    auto info = trans_router_->SearchRoute(route_request.at("from").AsString(), route_request.at("to").AsString());
+
+    json::Builder response;
+    response.StartDict();
+    response.Key("request_id").Value(route_request.at("id").AsInt());
+
+    if (info == std::nullopt) {
+        response.Key("error_message").Value("not found"s);
+    }
+    else {
+        response.Key("items").Value(RouteInfoToJson(info->edge_info));
+        response.Key("total_time").Value(info->time);
+    }
+
+    response.EndDict();
+    response_array_.Value(response.Build());
+}
+
 //Обработка запроса о отрисовки карты
-void JsonReader::ProccessRenderMap(int req_id) {
+void JsonReader::ProcessRenderMap(int req_id) {
     json::Builder response;
     response.StartDict();
 
@@ -191,20 +248,23 @@ void JsonReader::ProccessRenderMap(int req_id) {
 }
 
 //Обработка запросов
-void JsonReader::ProcessingRequest() {
+void JsonReader::ProcessRequest() {
     response_array_.StartArray();
     for (const auto& request : stat_requests_) {
         if (request.AsMap().at("type").AsString() == "Stop") {
-            ProccessStopRequest(request.AsMap());
+            ProcessStopRequest(request.AsMap());
         }
         else if (request.AsMap().at("type").AsString() == "Bus") {
-            ProccessBusRequest(request.AsMap());
+            ProcessBusRequest(request.AsMap());
         }
         else if (request.AsMap().at("type").AsString() == "Map") {
-            ProccessRenderMap(request.AsMap().at("id").AsInt());
+            ProcessRenderMap(request.AsMap().at("id").AsInt());
+        }
+        else if (request.AsMap().at("type").AsString() == "Route") {
+            ProcessRoute(request.AsMap());
         }
         else {
-            throw std::runtime_error("Proccessing requests error");
+            throw std::runtime_error("Processing requests error");
         }
     }
     response_array_.EndArray();

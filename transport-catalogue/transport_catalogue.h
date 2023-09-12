@@ -27,10 +27,17 @@ public:
 
     void SetDistancesToStops(const Stop* stop_from, const Stop* stop_to, size_t distance);
 
+    const std::unordered_map<PairStops, size_t, PairStopsHasher>& GetDistancesToStops() const;
+
     const std::unordered_map<std::string_view, const Bus*>* GetBusnameToBus() const;
 
     //Обработка запросов на добавление дистанции между остоновками
     void DistanceAdd();
+
+    const std::deque<Stop>& GetStops() const;
+    size_t CountStops() const;
+
+    const std::deque<Bus>& GetBuses() const;
 
 private:
     std::deque<Stop> stops_;    //остановки
