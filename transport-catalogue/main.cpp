@@ -2,30 +2,47 @@
 
 #include "transport_catalogue.h"
 #include "json_reader.h"
-#include "map_renderer.h"
-
-#include "domain.h"
-#include "svg.h"
 
 #include <iostream>
 
 using namespace std;
 
-int main()
-{
+void PrintUsage(std::ostream& stream = std::cerr) {
+    stream << "Usage: transport_catalogue [make_base|process_requests]\n"sv;
+}
+
+int main(int argc, char* argv[]) {
+
+    if (argc != 2) {
+        PrintUsage();
+        return 1;
+    }
+
+    const std::string_view mode(argv[1]);
     TransportCatalogue db;
     JsonReader process_json(db);
 
-    //Чтение Json
-    process_json.ReadJson(std::cin);
+    if (mode == "make_base"sv) {
+        //Чтение Json
+        process_json.ReadJson(std::cin, mode);
 
-    //Загрузка данных в транспортный каталог
-    process_json.LoadData();
+        //Загрузка данных в транспортный каталог
+        process_json.LoadData();
 
-    //Обработка запросов
-    process_json.ProcessRequest();
+    }
+    else if (mode == "process_requests"sv) {
+        //Чтение Json
+        process_json.ReadJson(std::cin, mode);
 
-    //Вывод JSON-массива ответов
-    process_json.PrintResponseArray(std::cout);
+        //Обработка запросов
+        process_json.ProcessRequest();
 
+        //Вывод JSON-массива ответов
+        process_json.PrintResponseArray(std::cout);
+
+    }
+    else {
+        PrintUsage();
+        return 1;
+    }
 }

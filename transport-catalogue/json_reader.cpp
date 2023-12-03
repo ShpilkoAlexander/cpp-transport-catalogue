@@ -1,5 +1,8 @@
 #include "json_reader.h"
 #include "transport_catalogue.h"
+#include "serialization.h"
+#include "request_handler.h"
+#include "map_renderer.h"
 
 #include <sstream>
 
@@ -23,8 +26,9 @@ void JsonReader::LoadData() {
     }
     db_.DistanceAdd();
     trans_router_ = std::make_unique<TransportRouter>(routing_settings_.at("bus_wait_time").AsInt(), routing_settings_.at("bus_velocity").AsInt(), db_);
-
-
+    map_render_ = std::make_unique<renderer::MapRenderer>(GetRenderSettings());
+    proto_info::ProtoInfo serializator(db_, *map_render_ , *trans_router_);
+    serializator.Serialization(serialization_settings_.at("file").AsString());
 }
 
 //Чтение цвета из Node
@@ -85,13 +89,19 @@ renderer::RenderSettings JsonReader::GetRenderSettings() {
 }
 
 //Чтение Json и определение base_requests_ и stat_requests_
-void JsonReader::ReadJson(std::istream& input) {
+void JsonReader::ReadJson(std::istream& input, std::string_view mode) {
     json::Document read_data = json::Load(input);
+    const auto& parameters = read_data.GetRoot().AsMap();
+    if (mode == "make_base") {
+        base_requests_ = parameters.at("base_requests").AsArray();
+        render_settings_ = parameters.at("render_settings").AsMap();
+        routing_settings_ = parameters.at("routing_settings").AsMap();
 
-    base_requests_ = read_data.GetRoot().AsMap().at("base_requests").AsArray();
-    stat_requests_ = read_data.GetRoot().AsMap().at("stat_requests").AsArray();
-    render_settings_ = read_data.GetRoot().AsMap().at("render_settings").AsMap();
-    routing_settings_ = read_data.GetRoot().AsMap().at("routing_settings").AsMap();
+    }
+    else if (mode == "process_requests") {
+        stat_requests_ = parameters.at("stat_requests").AsArray();
+    }
+    serialization_settings_ = parameters.at("serialization_settings").AsMap();
 }
 
 
@@ -165,7 +175,6 @@ void JsonReader::ProcessBusRequest(const json::Dict& bus_request) {
     json::Builder response;
     response.StartDict();
     response.Key("request_id").Value(bus_request.at("id").AsInt());
-
     if (bus_info.is_found) {
         response.Key("curvature").Value(json::Node{bus_info.curvature});
         response.Key("route_length").Value(json::Node{bus_info.route_len});
@@ -215,7 +224,6 @@ json::Node JsonReader::RouteInfoToJson(const std::vector<EdgeInfo>& edge_info) c
 void JsonReader::ProcessRoute(const json::Dict& route_request) {
 
     auto info = trans_router_->SearchRoute(route_request.at("from").AsString(), route_request.at("to").AsString());
-
     json::Builder response;
     response.StartDict();
     response.Key("request_id").Value(route_request.at("id").AsInt());
@@ -249,6 +257,28 @@ void JsonReader::ProcessRenderMap(int req_id) {
 
 //Обработка запросов
 void JsonReader::ProcessRequest() {
+
+
+    proto_info::ProtoInfo deserializator;
+    deserializator.Deserialization(serialization_settings_.at("file").AsString());
+
+
+    for (const Stop& stop : deserializator.ParseProtoStops()) {
+        db_.AddStop(stop);
+    }
+    db_.SetDistancesToStops(deserializator.ParseProtoDistance(db_));
+
+    for (const Bus& bus : deserializator.ParseProtoBuses(db_) ) {
+        db_.AddBus(bus);
+    }
+
+    map_render_ = std::make_unique<renderer::MapRenderer>();
+    deserializator.ParseProtoMap(*map_render_.get());
+
+    trans_router_ = std::make_unique<TransportRouter>(db_);
+    deserializator.ParseProtoTransportRouter(*trans_router_, db_);
+
+
     response_array_.StartArray();
     for (const auto& request : stat_requests_) {
         if (request.AsMap().at("type").AsString() == "Stop") {
@@ -267,13 +297,14 @@ void JsonReader::ProcessRequest() {
             throw std::runtime_error("Processing requests error");
         }
     }
+
     response_array_.EndArray();
 }
 
 //Отрисовка карты
 void JsonReader::RenderMap(std::ostream& output) {
-    renderer::MapRenderer map_renderer(GetRenderSettings());
-    RequestHandler req_handler(db_, map_renderer);
+//    map_renderer_ = std::make_unique<renderer::MapRenderer>(GetRenderSettings());
+    RequestHandler req_handler(db_, *map_render_);
     req_handler.RenderMap().Render(output);
 }
 

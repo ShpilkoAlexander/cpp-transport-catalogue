@@ -30,8 +30,23 @@ struct RouteInfo {
 class TransportRouter {
 public:
     TransportRouter(size_t bus_wait_time, size_t bus_velocity, TransportCatalogue& db);
+    TransportRouter(TransportCatalogue& db)
+        : db_(db) {};
 
     std::optional<RouteInfo> SearchRoute(std::string_view from, std::string_view to) const;
+
+    size_t GetWaitTime() const;
+    double GetVelocity() const;
+
+    void SetWaitTime(size_t time);
+    void SetVelocity(double vel);
+
+    graph::DirectedWeightedGraph<double>& GetGraph();
+
+    std::map<size_t, EdgeInfo>& GetEdges();
+    std::map<std::string_view, size_t>& GetStopnameToId();
+
+    std::unique_ptr<graph::Router<double>>& GetRouter();
 
 private:
     size_t bus_wait_time_;

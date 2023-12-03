@@ -7,17 +7,20 @@
 #include <deque>
 #include <unordered_map>
 #include <set>
-
+#include <algorithm>
+#include <transport_catalogue.pb.h>
 
 class TransportCatalogue {
 
 public:
 
     void AddStop(const Stop& stop, DistancesToStops& distance_to_stops);
+    void AddStop(const Stop& stop);
 
     const Stop* FindStop(std::string_view stopname) const;
 
     void AddBus(std::string_view busname, std::vector<std::string>& stopnames, bool is_roundtrip = false);
+    void AddBus(Bus add_bus);
 
     const Bus* FindBus(std::string_view busname) const;
 
@@ -39,6 +42,13 @@ public:
 
     const std::deque<Bus>& GetBuses() const;
 
+    void SetDistancesToStops(std::unordered_map<PairStops, size_t, PairStopsHasher> distances_to_stops);
+
+
+//    transport_catalogue_serialization::Catalogue Serialize() const;
+//    bool Deserialize(transport_catalogue_serialization::Catalogue& catalogue);
+
+
 private:
     std::deque<Stop> stops_;    //остановки
     std::unordered_map<std::string_view, const Stop*> stopname_to_stop_;  //индексы остановок
@@ -50,5 +60,8 @@ private:
 
     //Добавление дистанции между остановками
     void StopsDistancesAdd(const Stop* stop, const DistancesToStops& distances);
+
+    //Сортированный список остановок
+    std::vector<const Stop*> SortStops() const;
 
 }; 

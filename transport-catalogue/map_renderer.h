@@ -143,6 +143,9 @@ public:
         : render_settings_(render_settings){
     }
 
+    MapRenderer() {
+    }
+
     void SetBuses(std::vector<const Bus*> buses);
     void SetStops(std::vector<const Stop*> stops);
     void SetCoordinates(std::vector<geo::Coordinates> coords);
@@ -150,8 +153,8 @@ public:
 
     svg::Document RenderMap();
 
-private:
     RenderSettings render_settings_;
+private:
     std::vector<std::unique_ptr<svg::Drawable>> map_;
     std::vector<const Bus*> buses_;
     std::vector<const Stop*> stops_;

@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package t_catalogue_proto;
+
+message Color {
+    oneof col {
+        string str_color = 1;
+        Rgb rgb_color = 2;
+        Rgba rgba_color = 3;
+    }
+}
+
+message Rgb {
+    uint32 r = 1;
+    uint32 g = 2;
+    uint32 b = 3;
+}
+
+message Rgba {
+    uint32 r = 1;
+    uint32 g = 2;
+    uint32 b = 3;
+    double opacity = 4;
+}

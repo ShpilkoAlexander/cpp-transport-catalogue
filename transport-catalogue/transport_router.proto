@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package t_catalogue_proto;
+
+import "graph.proto";
+
+
+message HelpOpt {
+	oneof h_opt{
+		RouteInternalData help_opt = 1;
+	}
+}
+
+message RouteInternalData {
+	oneof TEST {
+		uint32 prev_edge = 2;
+	}
+	double weight = 3;
+
+}
+
+message RoutesInternalData {
+	repeated HelpRepeated routes = 1;
+}
+
+message HelpRepeated {
+	repeated HelpOpt help_repeated = 1;
+}
+
+
+message TransportRouter {
+	Graph graph = 1;
+	repeated EdgeInfo edges_ = 2;
+	Router router_ = 3;
+	int32 wait = 4;
+	double speed = 5;
+	repeated StopnamesToId stopnames_to_id_ = 6;
+	
+}
+
+message Router {
+	RoutesInternalData routes_internal_data = 1;
+}
+
+message EdgeInfo {
+	uint64 edge_id = 1;
+	bytes name = 2;
+	int32 count = 3;
+	double time = 4;
+	bool is_bus = 5;
+}
+
+message StopnamesToId {
+	bytes stopname = 1;
+	int32 id = 2;
+}

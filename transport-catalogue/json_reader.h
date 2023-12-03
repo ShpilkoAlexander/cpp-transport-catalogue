@@ -1,13 +1,14 @@
 #pragma once
 
-#include "json_reader.h"
+//#include "json_reader.h"
 #include "transport_catalogue.h"
 #include "json.h"
 #include "map_renderer.h"
 #include "svg.h"
-#include "request_handler.h"
+//#include "request_handler.h"
 #include "json_builder.h"
 #include "transport_router.h"
+#include "map_renderer.h"
 
 #include <iostream>
 #include <memory>
@@ -22,7 +23,7 @@ public:
     JsonReader(TransportCatalogue db);
 
     //Чтение Json и определение base_requests_ и stat_requests_
-    void ReadJson(std::istream& input);
+    void ReadJson(std::istream& input, std::string_view mode);
 
     //Загрузка данных в транспортный каталог
     void LoadData();
@@ -36,11 +37,13 @@ public:
 private:
     TransportCatalogue db_;
     std::unique_ptr<TransportRouter> trans_router_;
+    std::unique_ptr<renderer::MapRenderer> map_render_;
     json::Array base_requests_;
     json::Array stat_requests_;
     json::Dict render_settings_;
     json::Dict routing_settings_;
     json::Builder response_array_;
+    json::Dict serialization_settings_;
 
     //Обработка запроса на добавления остановки
     void ParsingStop(const json::Dict& stop_info);

@@ -55,6 +55,8 @@ void TransportRouter::AddWaitEdges() {
     }
 }
 
+
+
 void TransportRouter::AddBusesEdges() {
     for(const Bus& bus : db_.GetBuses()) {
         AddEdgesForBus(bus);
@@ -74,5 +76,35 @@ void TransportRouter::AddEdgesForBus(const Bus& bus) {
 //Проход по каждой остановки начиная со второй, вычисление растояние
 double TransportRouter::ComputeStopsDistance(const Stop& stop_from, const Stop& stop_to) const {
     return geo::ComputeDistance(stop_from.coordinates, stop_to.coordinates);
+}
+
+size_t TransportRouter::GetWaitTime() const {
+    return bus_wait_time_;
+}
+double TransportRouter::GetVelocity() const {
+    return bus_velocity_;
+}
+
+void TransportRouter::SetWaitTime(size_t time) {
+    bus_wait_time_ = time;
+}
+void TransportRouter::SetVelocity(double vel) {
+    bus_velocity_ = vel;
+}
+
+graph::DirectedWeightedGraph<double>& TransportRouter::GetGraph() {
+    return graph_;
+}
+
+std::map<size_t, EdgeInfo>& TransportRouter::GetEdges() {
+    return edge_id_to_info_;
+}
+
+std::map<std::string_view, size_t>& TransportRouter::GetStopnameToId() {
+    return stopname_to_id_;
+}
+
+std::unique_ptr<graph::Router<double>>& TransportRouter::GetRouter() {
+    return router_;
 }
 

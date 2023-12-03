@@ -3,7 +3,7 @@
 #define _USE_MATH_DEFINES
 
 #include "geo.h"
-#include "svg.h"
+//#include "svg.h"
 
 #include <cmath>
 #include <string>
