@@ -44,11 +44,6 @@ public:
 
     void SetDistancesToStops(std::unordered_map<PairStops, size_t, PairStopsHasher> distances_to_stops);
 
-
-//    transport_catalogue_serialization::Catalogue Serialize() const;
-//    bool Deserialize(transport_catalogue_serialization::Catalogue& catalogue);
-
-
 private:
     std::deque<Stop> stops_;    //остановки
     std::unordered_map<std::string_view, const Stop*> stopname_to_stop_;  //индексы остановок
