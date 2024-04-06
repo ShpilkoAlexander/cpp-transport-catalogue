@@ -1,22 +1,15 @@
 #pragma once
 
-//#include "json_reader.h"
 #include "transport_catalogue.h"
 #include "json.h"
 #include "map_renderer.h"
 #include "svg.h"
-//#include "request_handler.h"
 #include "json_builder.h"
 #include "transport_router.h"
 #include "map_renderer.h"
 
 #include <iostream>
 #include <memory>
-
-//struct RouteInfo {
-//    std::vector<
-//};
-
 
 class JsonReader {
 public:
