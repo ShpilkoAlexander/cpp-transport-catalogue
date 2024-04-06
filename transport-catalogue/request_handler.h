@@ -13,13 +13,6 @@
 class RequestHandler {
 public:
     RequestHandler(const TransportCatalogue& db, renderer::MapRenderer& renderer);
-
-    // Возвращает информацию о маршруте (запрос Bus)
-//    std::optional<BusInfo> GetBusStat(const std::string_view& bus_name) const;
-
-    // Возвращает маршруты, проходящие через
-//    const std::set<std::string_view> GetBusesByStop(const std::string_view& stop_name) const;
-
     svg::Document RenderMap() const;
 
 private:
