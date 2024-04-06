@@ -110,10 +110,7 @@ void InputReader::StopsDistancesAdding(const Stop* stop, std::string_view distan
 std::pair<const Stop*, size_t> InputReader::ParsingStopAndDistance(std::string_view distance_info) {
     size_t distance = std::stoul(std::string(GetNextWord(distance_info, distance_info.find('m'))));
     distance_info.remove_prefix(distance_info.find("to") + 2);
-
-   // std::cout << transport_catalogue_.FindStop(GetNextWord(distance_info, std::string::npos)) << std::endl;
-    //std::cout << distance_info << std::endl;
-
+    
     const Stop* stop = transport_catalogue_.FindStop(GetNextWord(distance_info, std::string::npos));
 
     return {stop, distance};
